@@ -45,7 +45,7 @@ Ce projet est utilisé en production sur une installation Victron complète.
 
 Configuration batterie :
 
-- 2 × Cloud Energy CLA24-150Ah
+- 2 × Cloud Energy CLA24-150Ah (Bms-Non comunicant)
 - Technologie LiFePO4
 - Montage série → 48V
 - Capacité totale : 150Ah
@@ -55,6 +55,7 @@ Mesure batterie :
 
 - SmartShunt 500A
 - 2 * Shelly Uni V1 (important le V1)
+- BMS logiciel Node-Red 
 
 ---
 
