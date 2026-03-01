@@ -80,7 +80,7 @@ Pilotage via :
 
 Panneaux :
 
-- 4 × Trina Solar Mono 420W
+- 4 × Trina Solar Mono 420W (expo pas terrible)
 
 Puissance totale :
 
@@ -100,7 +100,7 @@ Panneaux :
 
 Puissance panneaux :
 
-4000 Wc
+4000 Wc ( Expo Sud-Est Sud en 50/50)
 
 Puissance AC :
 
