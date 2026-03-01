@@ -1,0 +1,87 @@
+let ess_action="none";
+let charge_limit=null;
+
+
+// =====================
+// TEMPERATURE
+// =====================
+
+let minTemp=Math.min(temp1,temp2);
+
+if(minTemp<0){
+
+ ess_action="block_charge";
+
+}
+
+else if(minTemp<3){
+
+ ess_action="limit_charge";
+ charge_limit=5;
+
+}
+
+else if(minTemp<6){
+
+ ess_action="limit_charge";
+ charge_limit=10;
+
+}
+
+else if(minTemp<10){
+
+ ess_action="limit_charge";
+ charge_limit=20;
+
+}
+
+
+// =====================
+// SOC LIMITATION
+// =====================
+
+if(soc>95){
+
+ ess_action="limit_charge";
+ charge_limit=5;
+
+}
+
+else if(soc>90){
+
+ ess_action="limit_charge";
+ charge_limit=15;
+
+}
+
+else if(soc>80){
+
+ ess_action="limit_charge";
+ charge_limit=25;
+
+}
+
+
+// =====================
+// DELTA PRIORITAIRE
+// =====================
+
+if(delta>=0.9){
+
+ ess_action="block_charge";
+
+}
+
+else if(delta>=0.7){
+
+ ess_action="limit_charge";
+ charge_limit=5;
+
+}
+
+else if(delta>=0.35){
+
+ ess_action="limit_charge";
+ charge_limit=20;
+
+}

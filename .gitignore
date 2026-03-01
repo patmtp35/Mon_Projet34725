@@ -1,0 +1,7 @@
+
+secrets.yaml
+*.bin
+*.pio
+.esphome/
+.vscode/
+*.log

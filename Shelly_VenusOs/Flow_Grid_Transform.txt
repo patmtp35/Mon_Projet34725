@@ -1,0 +1,149 @@
+let s = msg.payload;
+
+if (!s || !s["em1:0"] || !s["em1:1"] || !s["em1data:1"] || !s["em1data:0"]) {
+    return null;
+}
+
+// ============================
+// SOURCES
+// ============================
+
+// GRID
+let grid = s["em1:1"];
+let gridData = s["em1data:1"];
+
+// PV (APS)
+let pv = s["em1:0"];
+let pvData = s["em1data:0"];
+
+
+// ============================
+// GRID POWER FILTRAGE ESS
+// ============================
+
+let p = Number(grid.act_power);
+if (!isFinite(p)) return null;
+
+
+// Deadband ESS stable
+
+const DEADBAND_W = 10;
+
+if (Math.abs(p) < DEADBAND_W)
+    p = 0;
+
+
+// EMA ESS équilibré
+
+const ALPHA = 0.35;
+
+let state = context.get("state") || {};
+
+let pFilt = (typeof state.pFilt === "number")
+    ? state.pFilt
+    : p;
+
+pFilt = (ALPHA * p) + ((1 - ALPHA) * pFilt);
+
+
+// Rate limit ESS
+
+const MAX_STEP_W = 80;
+
+let last = (typeof state.last === "number")
+    ? state.last
+    : pFilt;
+
+let delta = pFilt - last;
+
+if (delta > MAX_STEP_W) pFilt = last + MAX_STEP_W;
+if (delta < -MAX_STEP_W) pFilt = last - MAX_STEP_W;
+
+state.pFilt = pFilt;
+state.last = pFilt;
+
+context.set("state", state);
+
+
+// Arrondi ESS-friendly
+
+pFilt = Math.round(pFilt);
+
+
+// ============================
+// SECURISATION GRID
+// ============================
+
+let voltage = Number(grid.voltage) || 230;
+let current = Number(grid.current) || 0;
+
+let gridForward =
+(Number(gridData.total_act_energy) || 0) / 1000;
+
+let gridReverse =
+(Number(gridData.total_act_ret_energy) || 0) / 1000;
+
+
+// ============================
+// SECURISATION PV
+// ============================
+
+let pvPower = Number(pv.act_power);
+if (!isFinite(pvPower)) pvPower = 0;
+
+let pvVoltage =
+Number(pv.voltage) || 230;
+
+let pvCurrent =
+Number(pv.current) || 0;
+
+let pvEnergy =
+(Number(pvData.total_act_energy) || 0) / 1000;
+
+
+// ============================
+// SORTIES
+// ============================
+
+return [
+
+//
+// GRID → Victron Grid meter
+//
+{
+payload: {
+
+"/Ac/Power": pFilt,
+"/Ac/L1/Power": pFilt,
+
+"/Ac/L1/Voltage": voltage,
+"/Ac/L1/Current": current,
+
+"/Ac/L1/Energy/Forward": gridForward,
+"/Ac/L1/Energy/Reverse": gridReverse,
+
+"/Ac/Energy/Forward": gridForward,
+"/Ac/Energy/Reverse": gridReverse
+
+}
+},
+
+//
+// PV → Victron PV inverter
+//
+{
+payload: {
+
+"/Ac/Power": pvPower,
+"/Ac/L1/Power": pvPower,
+
+"/Ac/L1/Voltage": pvVoltage,
+"/Ac/L1/Current": pvCurrent,
+
+"/Ac/L1/Energy/Forward": pvEnergy,
+"/Ac/Energy/Forward": pvEnergy
+
+}
+}
+
+];

@@ -1,0 +1,207 @@
+[
+    {
+        "id": "4468ee9b1c49336f",
+        "type": "tab",
+        "label": "Virtual Shelly Pro3Em",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "ad08dd211dafe4b1",
+        "type": "victron-virtual",
+        "z": "4468ee9b1c49336f",
+        "name": "Shelly Grid ",
+        "outputs": 1,
+        "device": "grid",
+        "default_values": true,
+        "acload_nrofphases": 1,
+        "enable_s2support": false,
+        "battery_capacity": 25,
+        "include_battery_temperature": false,
+        "battery_voltage_preset": "24",
+        "battery_voltage_custom": 24,
+        "generator_type": "ac",
+        "generator_nrofphases": 1,
+        "include_engine_hours": false,
+        "include_starter_voltage": false,
+        "include_history_energy": false,
+        "grid_nrofphases": "1",
+        "include_motor_temp": false,
+        "include_controller_temp": false,
+        "include_coolant_temp": false,
+        "include_motor_rpm": true,
+        "include_motor_direction": true,
+        "position": 0,
+        "pvinverter_nrofphases": 1,
+        "switch_1_type": 1,
+        "switch_1_min": 0,
+        "switch_1_max": "",
+        "switch_1_initial": 0,
+        "switch_1_label": "",
+        "switch_1_unit": "",
+        "switch_1_step": 1,
+        "switch_1_customname": "",
+        "switch_1_group": "",
+        "switch_1_include_measurement": false,
+        "switch_1_rgb_color_wheel": false,
+        "switch_1_cct_wheel": false,
+        "switch_1_rgb_white_dimmer": false,
+        "fluid_type": 0,
+        "include_tank_battery": false,
+        "include_tank_temperature": false,
+        "tank_battery_voltage": 3.3,
+        "tank_capacity": 0.2,
+        "temperature_type": 2,
+        "include_humidity": false,
+        "include_pressure": false,
+        "include_temp_battery": false,
+        "temp_battery_voltage": 3.3,
+        "x": 1090,
+        "y": 40,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "180b7a113a0bf27e",
+        "type": "inject",
+        "z": "4468ee9b1c49336f",
+        "name": "Injection",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 360,
+        "y": 80,
+        "wires": [
+            [
+                "515bd9dc821af7d0"
+            ]
+        ]
+    },
+    {
+        "id": "515bd9dc821af7d0",
+        "type": "http request",
+        "z": "4468ee9b1c49336f",
+        "name": "",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://192.168.3.38/rpc/Shelly.GetStatus",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 530,
+        "y": 80,
+        "wires": [
+            [
+                "113ae2c73a01f3d3"
+            ]
+        ]
+    },
+    {
+        "id": "113ae2c73a01f3d3",
+        "type": "function",
+        "z": "4468ee9b1c49336f",
+        "name": "Transform Json",
+        "func": "let s = msg.payload;\n\nif (!s || !s[\"em1:0\"] || !s[\"em1:1\"] || !s[\"em1data:1\"] || !s[\"em1data:0\"]) {\n    return null;\n}\n\n// ============================\n// SOURCES\n// ============================\n\n// GRID\nlet grid = s[\"em1:1\"];\nlet gridData = s[\"em1data:1\"];\n\n// PV (APS)\nlet pv = s[\"em1:0\"];\nlet pvData = s[\"em1data:0\"];\n\n\n// ============================\n// GRID POWER FILTRAGE ESS\n// ============================\n\nlet p = Number(grid.act_power);\nif (!isFinite(p)) return null;\n\n\n// Deadband ESS stable\n\nconst DEADBAND_W = 10;\n\nif (Math.abs(p) < DEADBAND_W)\n    p = 0;\n\n\n// EMA ESS équilibré\n\nconst ALPHA = 0.35;\n\nlet state = context.get(\"state\") || {};\n\nlet pFilt = (typeof state.pFilt === \"number\")\n    ? state.pFilt\n    : p;\n\npFilt = (ALPHA * p) + ((1 - ALPHA) * pFilt);\n\n\n// Rate limit ESS\n\nconst MAX_STEP_W = 80;\n\nlet last = (typeof state.last === \"number\")\n    ? state.last\n    : pFilt;\n\nlet delta = pFilt - last;\n\nif (delta > MAX_STEP_W) pFilt = last + MAX_STEP_W;\nif (delta < -MAX_STEP_W) pFilt = last - MAX_STEP_W;\n\nstate.pFilt = pFilt;\nstate.last = pFilt;\n\ncontext.set(\"state\", state);\n\n\n// Arrondi ESS-friendly\n\npFilt = Math.round(pFilt);\n\n\n// ============================\n// SECURISATION GRID\n// ============================\n\nlet voltage = Number(grid.voltage) || 230;\nlet current = Number(grid.current) || 0;\n\nlet gridForward =\n(Number(gridData.total_act_energy) || 0) / 1000;\n\nlet gridReverse =\n(Number(gridData.total_act_ret_energy) || 0) / 1000;\n\n\n// ============================\n// SECURISATION PV\n// ============================\n\nlet pvPower = Number(pv.act_power);\nif (!isFinite(pvPower)) pvPower = 0;\n\nlet pvVoltage =\nNumber(pv.voltage) || 230;\n\nlet pvCurrent =\nNumber(pv.current) || 0;\n\nlet pvEnergy =\n(Number(pvData.total_act_energy) || 0) / 1000;\n\n\n// ============================\n// SORTIES\n// ============================\n\nreturn [\n\n//\n// GRID → Victron Grid meter\n//\n{\npayload: {\n\n\"/Ac/Power\": pFilt,\n\"/Ac/L1/Power\": pFilt,\n\n\"/Ac/L1/Voltage\": voltage,\n\"/Ac/L1/Current\": current,\n\n\"/Ac/L1/Energy/Forward\": gridForward,\n\"/Ac/L1/Energy/Reverse\": gridReverse,\n\n\"/Ac/Energy/Forward\": gridForward,\n\"/Ac/Energy/Reverse\": gridReverse\n\n}\n},\n\n//\n// PV → Victron PV inverter\n//\n{\npayload: {\n\n\"/Ac/Power\": pvPower,\n\"/Ac/L1/Power\": pvPower,\n\n\"/Ac/L1/Voltage\": pvVoltage,\n\"/Ac/L1/Current\": pvCurrent,\n\n\"/Ac/L1/Energy/Forward\": pvEnergy,\n\"/Ac/Energy/Forward\": pvEnergy\n\n}\n}\n\n];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 760,
+        "y": 80,
+        "wires": [
+            [
+                "ad08dd211dafe4b1"
+            ],
+            [
+                "fe13ca499d58e278"
+            ]
+        ],
+        "info": "let s = msg.payload;\r\n\r\n// Vérifie que les données existent\r\nif (!s || !s[\"em1:1\"] || !s[\"em1data:1\"]) {\r\n    return null;\r\n}\r\n\r\n// Pince 2 = em1:1\r\nlet em = s[\"em1:1\"];\r\nlet emdata = s[\"em1data:1\"];\r\n\r\n// Renvoie 5 sorties\r\nreturn [\r\n    { payload: em.act_power },                          // 1 → L1 Power (W)\r\n    { payload: em.voltage },                            // 2 → L1 Voltage (V)\r\n    { payload: em.current },                            // 3 → L1 Current (A)\r\n    { payload: emdata.total_act_energy / 1000 },        // 4 → Energy Forward (kWh)\r\n    { payload: emdata.total_act_ret_energy / 1000 }     // 5 → Energy Reverse (kWh)\r\n];\r\n"
+    },
+    {
+        "id": "fe13ca499d58e278",
+        "type": "victron-virtual",
+        "z": "4468ee9b1c49336f",
+        "name": "ApsSystems",
+        "outputs": 1,
+        "device": "pvinverter",
+        "default_values": true,
+        "acload_nrofphases": 1,
+        "enable_s2support": false,
+        "battery_capacity": 25,
+        "include_battery_temperature": false,
+        "battery_voltage_preset": "24",
+        "battery_voltage_custom": 24,
+        "generator_type": "ac",
+        "generator_nrofphases": 1,
+        "include_engine_hours": false,
+        "include_starter_voltage": false,
+        "include_history_energy": false,
+        "grid_nrofphases": 1,
+        "include_motor_temp": false,
+        "include_controller_temp": false,
+        "include_coolant_temp": false,
+        "include_motor_rpm": true,
+        "include_motor_direction": true,
+        "position": 0,
+        "pvinverter_nrofphases": 1,
+        "switch_1_type": 1,
+        "switch_1_min": 0,
+        "switch_1_max": "",
+        "switch_1_initial": 0,
+        "switch_1_label": "",
+        "switch_1_unit": "",
+        "switch_1_step": 1,
+        "switch_1_customname": "",
+        "switch_1_group": "",
+        "switch_1_include_measurement": false,
+        "switch_1_rgb_color_wheel": false,
+        "switch_1_cct_wheel": false,
+        "switch_1_rgb_white_dimmer": false,
+        "fluid_type": 0,
+        "include_tank_battery": false,
+        "include_tank_temperature": false,
+        "tank_battery_voltage": 3.3,
+        "tank_capacity": 0.2,
+        "temperature_type": 2,
+        "include_humidity": false,
+        "include_pressure": false,
+        "include_temp_battery": false,
+        "temp_battery_voltage": 3.3,
+        "x": 1090,
+        "y": 140,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "1d7d706488c5b84e",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "@victronenergy/node-red-contrib-victron": "1.6.60"
+        }
+    }
+]
