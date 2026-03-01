@@ -6,6 +6,8 @@
 ![ESS](https://img.shields.io/badge/Victron-MultiPlusII-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+![Architecture](schema.png)
+
 # Victron VenusOS DIY Integration (ESP32 + MQTT)
 
 ## Introduction
