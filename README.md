@@ -69,6 +69,7 @@ Mesure batterie :
 Pilotage via :
 
 - VenusOS
+- Node-Red 
 - Home Assistant
 
 ---
