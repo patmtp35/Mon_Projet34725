@@ -25,6 +25,10 @@ Le système permet de créer :
 
 Compatible VenusOS **3.70+**
 
+Mon Besoin : Dans un premier temps recharger sur le Surplus Uniquement, pouvoir mettre en Pause la charge ou la décharge , si trop de surplus laisser le Routeur Soalire faire son Travail.
+
+Evolution a venir : RAS a ce jour
+
 ---
 
 ## Installation réelle (Configuration de référence)
