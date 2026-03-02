@@ -19,6 +19,7 @@ Chacun est libre de l'adapter selon ses besoins.
 - Carte SD 64 Go
 - Alimentation officielle
 - Réseau Ethernet recommandé
+- Ecran 7'' Tactile
 
 ---
 
