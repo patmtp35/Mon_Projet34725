@@ -61,31 +61,27 @@ A adapter selon votre batterie.
 Exemple :
 
 - Type batterie : LiFePO4
-- Tension système : 48V
-- Capacité : à adapter
+- Tension système : 48V (2*24v en serie)
+- Capacité : 150Ah - 7680Wh
 
 Exemples de paramètres :
 
 Bulk voltage :
-à adapter
+56.2
 
 Absorption voltage :
-à adapter
+56.3
 
 Float voltage :
-à adapter
-
+53.9
 Absorption time :
-à adapter
+25mn
 
 Tail current :
-à adapter
+0.2c
 
-Low voltage shutdown :
-à adapter
-
-Restart voltage :
-à adapter
+Low Soc shutdown :
+20%
 
 ---
 

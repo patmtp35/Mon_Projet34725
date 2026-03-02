@@ -25,9 +25,12 @@ Le système permet de créer :
 
 Compatible VenusOS **3.70+**
 
-Mon Besoin : Dans un premier temps recharger sur le Surplus Uniquement, pouvoir mettre en Pause la charge ou la décharge , si trop de surplus laisser le Routeur Soalire faire son Travail.
+Mon Besoin : 
+N'ayant pas de gros besoin, compteur 6kva maison BBC chauffage bois thermodynamique talon 250W jour 150 Nuit, pic Max a 4Kw , Routeur MsunPV Charge Boost Thermo + Radiateur Acova Salon 1500w
+Mon But dans un premier temps recharger sur le Surplus Uniquement, pouvoir mettre en Pause la charge ou la décharge , si trop de surplus laisser le Routeur Solaire faire son Travail.
 
-Evolution a venir : RAS a ce jour
+Evolution a venir : 
+RAS a ce jour
 
 ---
 
