@@ -81,6 +81,7 @@ Pilotage via :
 ### MPPT Victron
 
 - 2 × SmartSolar MPPT 100/20
+- Esp32 Ve-diret-to-mqtt  (fallback Bluetooth)
 
 Panneaux :
 
