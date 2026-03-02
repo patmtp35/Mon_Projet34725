@@ -1,4 +1,4 @@
-# README_MP2.md
+# README.md
 # Configuration primaire MultiPlus-II (MP2)
 
 ## Présentation
