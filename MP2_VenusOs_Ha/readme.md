@@ -1,11 +1,11 @@
 ## VRM
 
-![VRM](images/VRM.png)
+![VRM](images/vrm.png)
 
 ## VenusOs Dashboard
 
-![VenusOs DashBoard](images/Venus_Dashboard.png)
+![VenusOs DashBoard](images/venus_dashboard.png)
 
 ## VenusOs Devices 
 
-![VenusOs Devices](images/VenusOs_Devices.png)
+![VenusOs Devices](images/venusos_devices.png)
