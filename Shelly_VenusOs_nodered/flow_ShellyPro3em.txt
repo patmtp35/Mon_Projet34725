@@ -1,6 +1,6 @@
 [
     {
-        "id": "xxxxxxxxxxxx",
+        "id": "xxxxxxxxxxxxxx",
         "type": "tab",
         "label": "Virtual Shelly Pro3Em",
         "disabled": false,
