@@ -8,4 +8,4 @@
 
 ## VenusOs Devices 
 
-![VenusOs Devices](vVenusOs_Devices.png)
+![VenusOs Devices](VenusOs_Devices.png)
