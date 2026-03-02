@@ -20,7 +20,7 @@ Le système permet de créer :
 - Batterie GX virtuelle (SmartShunt)
 - MPPT GX virtuels (BLE + VE.Direct)
 - Smart Meter GX-like (Shelly)
-- ESS MultiPlus-II supervisé
+- ESS MultiPlus-II supervisé 48-3000-35
 - Automatisations Home Assistant
 
 Compatible VenusOS **3.70+**
