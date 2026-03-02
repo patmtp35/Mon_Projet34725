@@ -1,0 +1,84 @@
+################################################################################
+# Victron
+##########################
+# batterie ON-OFF
+- switch:
+    - name: "MP2 Batterie Active"
+      unique_id: mp2_batterie_active
+
+      state: >
+        {{ states('number.gx_device_limite_de_puissance_maximale_de_l_onduleur_ess')|int > 100 }}
+
+      turn_on:
+        action: number.set_value
+        target:
+          entity_id: number.gx_device_limite_de_puissance_maximale_de_l_onduleur_ess
+        data:
+          value: 1900
+
+      turn_off:
+        action: number.set_value
+        target:
+          entity_id: number.gx_device_limite_de_puissance_maximale_de_l_onduleur_ess
+        data:
+          value: 0  
+#Charge On - OFF            
+- switch:
+    - name: "ESS Charge Active"
+      unique_id: ess_charge_active
+
+      state: >
+        {{ states('number.system_setup_courant_de_charge_maximal_ess')|float > 1 }}
+
+      turn_on:
+        action: number.set_value
+        target:
+          entity_id: number.system_setup_courant_de_charge_maximal_ess
+        data:
+          value: 30
+
+      turn_off:
+        action: number.set_value
+        target:
+          entity_id: number.system_setup_courant_de_charge_maximal_ess
+        data:
+          value: 0     
+# Pause Totale MP2
+- switch:
+    - name: "ESS Pause Totale"
+      unique_id: ess_pause_totale
+
+      state: >
+        {{
+        states('number.gx_device_limite_de_puissance_maximale_de_l_onduleur_ess')|int == 0
+        and
+        states('number.system_setup_courant_de_charge_maximal_ess')|int == 0
+        }}
+
+      turn_on:
+
+        - action: number.set_value
+          target:
+            entity_id: number.gx_device_limite_de_puissance_maximale_de_l_onduleur_ess
+          data:
+            value: 0
+
+        - action: number.set_value
+          target:
+            entity_id: number.system_setup_courant_de_charge_maximal_ess
+          data:
+            value: 0
+
+      turn_off:
+
+        - action: number.set_value
+          target:
+            entity_id: number.gx_device_limite_de_puissance_maximale_de_l_onduleur_ess
+          data:
+            value: 1900
+
+        - action: number.set_value
+          target:
+            entity_id: number.system_setup_courant_de_charge_maximal_ess
+          data:
+            value: 30
