@@ -1,4 +1,5 @@
 #############################################
+# V6.3 - Amelioration remonté Historique MPPT
 # V6.2 - GX ESS amelioration
 # V6.1 - Amelioration Mqtt VenusOs
 # V6.0 - Rajout Venus Os Ready Via Mqtt
@@ -114,36 +115,65 @@ time:
         hours: 0
         then:
           - lambda: |-
-              // ---------- MPPT 100/20 ----------
+              // ═══════════════════════════════════════
+              // MPPT 100/20 — sauvegarde J-1 puis reset
+              // ═══════════════════════════════════════
+
+              // Yield yesterday (kWh)
               id(mppt10020_yield_yesterday) =
                 id(mppt10020_yield_today_wh) / 1000.0f;
 
+              // Lifetime cumulé
               id(mppt10020_yield_lifetime) +=
                 id(mppt10020_yield_yesterday);
 
-              id(mppt10020_yield_today_wh) = 0;
-              id(mppt10020_time_bulk) = 0;
-              id(mppt10020_time_abs) = 0;
-              id(mppt10020_time_float) = 0;
-              id(mppt10020_max_power_today) = 0;
-              id(mppt10020_last_state) = 0;
-              id(mppt10020_last_ts) = 0;
+              // Sauvegarde max avant reset ✅
+              id(mppt10020_max_power_yesterday)      = id(mppt10020_max_power_today);
+              id(mppt10020_max_pv_voltage_yesterday) = id(mppt10020_max_pv_voltage_today);
 
-              // ---------- MPPT 100/20_2 ----------
+              // Reset daily
+              id(mppt10020_yield_today_wh)       = 0;
+              id(mppt10020_max_power_today)       = 0;
+              id(mppt10020_max_pv_voltage_today)  = 0;  // ✅ manquait avant
+              id(mppt10020_time_bulk)             = 0;
+              id(mppt10020_time_abs)              = 0;
+              id(mppt10020_time_float)            = 0;
+              id(mppt10020_last_state)            = 0;
+              id(mppt10020_last_ts)               = 0;
+              id(mppt10020_max_pv_voltage_today)   = 0;
+              id(mppt10020_2_max_pv_voltage_today) = 0;
+
+              // ═══════════════════════════════════════
+              // MPPT 100/20_2 — sauvegarde J-1 puis reset
+              // ═══════════════════════════════════════
+
+              // Yield yesterday (kWh)
               id(mppt10020_2_yield_yesterday) =
                 id(mppt10020_2_yield_today_wh) / 1000.0f;
 
+              // Lifetime cumulé
               id(mppt10020_2_yield_lifetime) +=
                 id(mppt10020_2_yield_yesterday);
 
-              id(mppt10020_2_yield_today_wh) = 0;
-              id(mppt10020_2_time_bulk) = 0;
-              id(mppt10020_2_time_abs) = 0;
-              id(mppt10020_2_time_float) = 0;
-              id(mppt10020_2_max_power_today) = 0;
-              id(mppt10020_2_last_state) = 0;
-              id(mppt10020_2_last_ts) = 0;
+              // Sauvegarde max avant reset ✅
+              id(mppt10020_2_max_power_yesterday)      = id(mppt10020_2_max_power_today);
+              id(mppt10020_2_max_pv_voltage_yesterday) = id(mppt10020_2_max_pv_voltage_today);
 
+              // Reset daily
+              id(mppt10020_2_yield_today_wh)       = 0;
+              id(mppt10020_2_max_power_today)       = 0;
+              id(mppt10020_2_max_pv_voltage_today)  = 0;  // ✅ manquait avant
+              id(mppt10020_2_time_bulk)             = 0;
+              id(mppt10020_2_time_abs)              = 0;
+              id(mppt10020_2_time_float)            = 0;
+              id(mppt10020_2_last_state)            = 0;
+              id(mppt10020_2_last_ts)               = 0;
+
+              // ═══════════════════════════════════════
+              // Battery min/max voltage — reset daily
+              // ═══════════════════════════════════════
+              id(battery_min_voltage_today) = 1000.0f;
+              id(battery_max_voltage_today) = 0.0f;
 #############################################
 ### MQTT DU VENUS OS
 #############################################
@@ -275,9 +305,26 @@ victron:
     throttle: 2s
 
 globals:
+
+  - id: mppt10020_max_power_yesterday
+    type: float
+    initial_value: '0.0'
+
+  - id: mppt10020_2_max_power_yesterday
+    type: float
+    initial_value: '0.0'
+
+  - id: mppt10020_max_pv_voltage_yesterday
+    type: float
+    initial_value: '0.0'
+
+  - id: mppt10020_2_max_pv_voltage_yesterday
+    type: float
+    initial_value: '0.0'
+
   - id: venus_portal_id
     type: std::string
-    initial_value: '""'
+    initial_value: ""
 
   - id: battery_instance
     type: int
@@ -372,9 +419,12 @@ globals:
     initial_value: '0.0'    
 
   - id: mppt10020_yield_lifetime
+    restore_value: yes
     type: float
     initial_value: '0.0'
+
   - id: mppt10020_2_yield_lifetime
+    restore_value: yes 
     type: float
     initial_value: '0.0'
 
@@ -838,11 +888,20 @@ sensor:
       float v_ble = id(mppt10020_ble_panel_voltage).state;
       float v_vd  = id(mppt10020_vd_panel_voltage).state;
 
+      float v = NAN;
+
+      // Fallback inchangé : BLE prioritaire
       if (!isnan(v_ble) && v_ble > 5.0)
-        return v_ble;
-      if (!isnan(v_vd) && v_vd > 5.0)
-        return v_vd;
-      return 0.0;
+        v = v_ble;
+      else if (!isnan(v_vd) && v_vd > 5.0)
+        v = v_vd;
+
+      // ✅ Mise à jour max PV voltage today (uniquement si valeur valide)
+      if (!isnan(v) && v > id(mppt10020_max_pv_voltage_today))
+        id(mppt10020_max_pv_voltage_today) = v;
+
+      // Comportement original : retourne 0.0 si aucune source valide
+      return isnan(v) ? 0.0f : v;
 
   - platform: template
     name: "smartsolar1_esp_panel_power"
@@ -1286,7 +1345,14 @@ interval:
             if (isnan(pwr)) pwr = 0;
 
             float pv_v = id(mppt10020_vd_panel_voltage).state;
-            if (isnan(pv_v)) pv_v = 0;
+            if (isnan(pv_v))
+              pv_v = id(mppt10020_ble_panel_voltage).state;
+            if (isnan(pv_v))
+              pv_v = 0;
+
+            // Track Max PV Voltage Today
+            if (pv_v > 5 && pv_v > id(mppt10020_max_pv_voltage_today))
+              id(mppt10020_max_pv_voltage_today) = pv_v;
 
             float bv = id(mppt10020_vd_battery_voltage).state;
             if (isnan(bv))
@@ -1313,10 +1379,12 @@ interval:
             dc0["Current"] = bi;
 
             JsonObject hist0 = doc["History"]["Daily"]["0"].to<JsonObject>();
+            JsonObject hist1 = doc["History"]["Daily"]["1"].to<JsonObject>();
 
+            // ── Aujourd'hui ──
             float y = id(mppt10020_vd_yield_today).state;
             if (!isnan(y))
-              hist0["Yield"] = y / 1000.0;
+              hist0["Yield"] = y;
             else
               hist0["Yield"] = id(mppt10020_yield_today_wh) / 1000.0;
 
@@ -1326,7 +1394,16 @@ interval:
             else
               hist0["MaxPower"] = id(mppt10020_max_power_today);
 
-            hist0["MaxPvVoltage"] = id(mppt10020_max_pv_voltage_today);
+            hist0["MaxPvVoltage"]      = id(mppt10020_max_pv_voltage_today);
+            hist0["MinBatteryVoltage"] = id(battery_min_voltage_today) < 1000.0f ? id(battery_min_voltage_today) : 0.0f;
+            hist0["MaxBatteryVoltage"] = id(battery_max_voltage_today);
+            hist0["TimeInBulk"]        = (int) id(mppt10020_time_bulk);
+            hist0["TimeInAbsorption"]  = (int) id(mppt10020_time_abs);
+            hist0["TimeInFloat"]       = (int) id(mppt10020_time_float);
+
+            hist1["Yield"]        = id(mppt10020_yield_yesterday);
+            hist1["MaxPower"]     = id(mppt10020_max_power_yesterday);
+            hist1["MaxPvVoltage"] = id(mppt10020_max_pv_voltage_yesterday);
 
             doc["ErrorCode"] = (int) id(mppt10020_vd_error_code).state;
             doc["State"] = state;
@@ -1353,15 +1430,24 @@ interval:
               pwr = id(mppt10020_2_ble_panel_power).state;
             if (isnan(pwr)) pwr = 0;
 
-            float pv_v = id(mppt10020_2_vd_panel_voltage).state;
-            if (isnan(pv_v)) pv_v = 0;
-
             float bv = id(mppt10020_2_vd_battery_voltage).state;
             if (isnan(bv))
               bv = id(smartshunt500a_battery_voltage).state;
 
             float bi = id(mppt10020_2_vd_panel_current).state;
-            if (isnan(bi)) bi = 0;
+            if (isnan(bi)) bi = 0; 
+
+            float pv_v = id(mppt10020_2_vd_panel_voltage).state;
+
+            if (isnan(pv_v))
+              pv_v = id(mppt10020_2_ble_panel_voltage).state;
+
+            if (isnan(pv_v))
+              pv_v = 0;
+
+            // Track Max PV Voltage Today
+            if (pv_v > 5 && pv_v > id(mppt10020_2_max_pv_voltage_today))
+              id(mppt10020_2_max_pv_voltage_today) = pv_v;
 
             int state = 1;
             if (!isnan(id(mppt10020_2_vd_charging_mode_id).state)) {
@@ -1381,10 +1467,12 @@ interval:
             dc0["Current"] = bi;
 
             JsonObject hist0 = doc["History"]["Daily"]["0"].to<JsonObject>();
+            JsonObject hist1 = doc["History"]["Daily"]["1"].to<JsonObject>();
 
+            // ── Aujourd'hui ──
             float y = id(mppt10020_2_vd_yield_today).state;
             if (!isnan(y))
-              hist0["Yield"] = y / 1000.0;
+              hist0["Yield"] = y;
             else
               hist0["Yield"] = id(mppt10020_2_yield_today_wh) / 1000.0;
 
@@ -1394,7 +1482,16 @@ interval:
             else
               hist0["MaxPower"] = id(mppt10020_2_max_power_today);
 
-            hist0["MaxPvVoltage"] = id(mppt10020_2_max_pv_voltage_today);
+            hist0["MaxPvVoltage"]      = id(mppt10020_2_max_pv_voltage_today);
+            hist0["MinBatteryVoltage"] = id(battery_min_voltage_today) < 1000.0f ? id(battery_min_voltage_today) : 0.0f;
+            hist0["MaxBatteryVoltage"] = id(battery_max_voltage_today);
+            hist0["TimeInBulk"]        = (int) id(mppt10020_2_time_bulk);
+            hist0["TimeInAbsorption"]  = (int) id(mppt10020_2_time_abs);
+            hist0["TimeInFloat"]       = (int) id(mppt10020_2_time_float);
+
+            hist1["Yield"]        = id(mppt10020_2_yield_yesterday);
+            hist1["MaxPower"]     = id(mppt10020_2_max_power_yesterday);
+            hist1["MaxPvVoltage"] = id(mppt10020_2_max_pv_voltage_yesterday);
 
             doc["ErrorCode"] = (int) id(mppt10020_2_vd_error_code).state;
             doc["State"] = state;
