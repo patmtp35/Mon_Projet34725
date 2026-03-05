@@ -429,12 +429,10 @@ globals:
     initial_value: '0.0'    
 
   - id: mppt10020_yield_lifetime
-    restore_value: yes
     type: float
     initial_value: '0.0'
 
   - id: mppt10020_2_yield_lifetime
-    restore_value: yes 
     type: float
     initial_value: '0.0'
 
@@ -681,6 +679,11 @@ sensor:
     yield_total:
       name: "mppt10020_vd_yield_total"
       id: mppt10020_vd_yield_total
+      on_value:
+        then:
+          - lambda: |-
+              if (!isnan(x) && x > 0)
+                id(mppt10020_yield_lifetime) = x;  // kWh natif VE.Direct
       
     max_power_today:
       name: "mppt10020_vd_max_power_today"
@@ -739,8 +742,13 @@ sensor:
       id: mppt10020_2_vd_yield_yesterday
       name: "mppt10020_2_vd_yield_yesterday"
     yield_total:
-      id: mppt10020_2_vd_yield_total
       name: "mppt10020_2_vd_yield_total"
+      id: mppt10020_2_vd_yield_total
+      on_value:
+        then:
+          - lambda: |-
+              if (!isnan(x) && x > 0)
+                id(mppt10020_2_yield_lifetime) = x;  // kWh natif VE.Direct
     max_power_today:
       id: mppt10020_2_vd_max_power_today
       name: "mppt10020_2_vd_max_power_today"
@@ -1369,7 +1377,35 @@ interval:
             }
           qos: 0
           retain: true
+################################################################
+# timers
+################################################################          
 
+  - interval: 60s
+    then:
+      - lambda: |-
+
+          int m = (int) id(mppt10020_vd_charging_mode_id).state;
+
+          if (m == 3)
+            id(mppt10020_time_bulk)++;
+
+          if (m == 4)
+            id(mppt10020_time_abs)++;
+
+          if (m == 5)
+            id(mppt10020_time_float)++;
+
+          int m2 = (int) id(mppt10020_2_vd_charging_mode_id).state;
+
+          if (m2 == 3)
+            id(mppt10020_2_time_bulk)++;
+
+          if (m2 == 4)
+            id(mppt10020_2_time_abs)++;
+
+          if (m2 == 5)
+            id(mppt10020_2_time_float)++;
 ##################################################################################
 # MPPT 100/20 → Venus OS (MR-MANUEL CLEAN)
 ##################################################################################
@@ -1415,14 +1451,22 @@ interval:
 
             JsonObject yield = doc["Yield"].to<JsonObject>();
             yield["Power"] = pwr;
-            yield["System"] = id(mppt10020_yield_lifetime);
+            float total = id(mppt10020_vd_yield_total).state;
+
+            if (!isnan(total))
+              yield["System"] = total / 1000.0;
+            else
+              yield["System"] = id(mppt10020_yield_lifetime);
 
             JsonObject dc0 = doc["Dc"]["0"].to<JsonObject>();
             dc0["Voltage"] = bv;
             dc0["Current"] = bi;
 
-            JsonObject hist0 = doc["History"]["Daily"]["0"].to<JsonObject>();
-            JsonObject hist1 = doc["History"]["Daily"]["1"].to<JsonObject>();
+            JsonObject history = doc["History"].to<JsonObject>();
+            JsonObject daily = history["Daily"].to<JsonObject>();
+
+            JsonObject hist0 = daily["0"].to<JsonObject>();
+            JsonObject hist1 = daily["1"].to<JsonObject>();
 
             // ── Aujourd'hui ──
             float y = id(mppt10020_vd_yield_today).state;
@@ -1504,14 +1548,23 @@ interval:
 
             JsonObject yield = doc["Yield"].to<JsonObject>();
             yield["Power"] = pwr;
-            yield["System"] = id(mppt10020_2_yield_lifetime);
+
+            float total = id(mppt10020_2_vd_yield_total).state;
+
+            if (!isnan(total))
+              yield["System"] = total / 1000.0;
+            else
+              yield["System"] = id(mppt10020_2_yield_lifetime);
 
             JsonObject dc0 = doc["Dc"]["0"].to<JsonObject>();
             dc0["Voltage"] = bv;
             dc0["Current"] = bi;
 
-            JsonObject hist0 = doc["History"]["Daily"]["0"].to<JsonObject>();
-            JsonObject hist1 = doc["History"]["Daily"]["1"].to<JsonObject>();
+            JsonObject history = doc["History"].to<JsonObject>();
+            JsonObject daily = history["Daily"].to<JsonObject>();
+
+            JsonObject hist0 = daily["0"].to<JsonObject>();
+            JsonObject hist1 = daily["1"].to<JsonObject>();
 
             // ── Aujourd'hui ──
             float y = id(mppt10020_2_vd_yield_today).state;
