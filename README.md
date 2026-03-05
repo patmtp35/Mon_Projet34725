@@ -62,7 +62,7 @@ Mesure batterie :
 
 - SmartShunt 500A
 - 2 * Shelly Uni V1 (important le V1)
-- BMS logiciel Node-Red 
+- BMS logiciel Node-Red & HA en redondance
 
 ---
 
