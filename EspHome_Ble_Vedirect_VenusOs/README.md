@@ -150,4 +150,4 @@ Astuce : `history_days = 14` (si tu as constaté le bug <14).
 
 ## Version
 
-- YAML : **v6.2.0** (GX ESS improvements / MQTT Venus OS improvements)
+- YAML : **v6.3.0** (GX ESS improvements / MQTT Venus OS improvements)
