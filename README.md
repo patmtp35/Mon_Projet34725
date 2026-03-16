@@ -1,4 +1,4 @@
-# Victron VenusOS DIY Integration
+# My Project Victron Rip4 VenusOS + Esp32 Ve-Direct + Ha 
 
 ![VenusOS](https://img.shields.io/badge/VenusOS-3.70-green)
 ![ESPHome](https://img.shields.io/badge/ESPHome-2026-blue)
