@@ -67,13 +67,13 @@ Exemple :
 Exemples de paramètres :
 
 Bulk voltage :
-56.2
+54.8
 
 Absorption voltage :
-56.3
+53.6
 
 Float voltage :
-53.9
+53.4
 Absorption time :
 25mn
 
