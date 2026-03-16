@@ -1,87 +1,224 @@
-let ess_action="none";
-let charge_limit=null;
-
-
-// =====================
-// TEMPERATURE
-// =====================
-
-let minTemp=Math.min(temp1,temp2);
-
-if(minTemp<0){
-
- ess_action="block_charge";
-
-}
-
-else if(minTemp<3){
-
- ess_action="limit_charge";
- charge_limit=5;
-
-}
-
-else if(minTemp<6){
-
- ess_action="limit_charge";
- charge_limit=10;
-
-}
-
-else if(minTemp<10){
-
- ess_action="limit_charge";
- charge_limit=20;
-
-}
-
-
-// =====================
-// SOC LIMITATION
-// =====================
-
-if(soc>95){
-
- ess_action="limit_charge";
- charge_limit=5;
-
-}
-
-else if(soc>90){
-
- ess_action="limit_charge";
- charge_limit=15;
-
-}
-
-else if(soc>80){
-
- ess_action="limit_charge";
- charge_limit=25;
-
-}
-
-
-// =====================
-// DELTA PRIORITAIRE
-// =====================
-
-if(delta>=0.9){
-
- ess_action="block_charge";
-
-}
-
-else if(delta>=0.7){
-
- ess_action="limit_charge";
- charge_limit=5;
-
-}
-
-else if(delta>=0.35){
-
- ess_action="limit_charge";
- charge_limit=20;
-
-}
+[
+    {
+        "id": "e632a263b916f867",
+        "type": "tab",
+        "label": "ShellyUni BMS1/2 + reboot MK3",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "inject_timer",
+        "type": "inject",
+        "z": "e632a263b916f867",
+        "name": "Every 10s",
+        "props": [
+            {
+                "p": "payload",
+                "v": "",
+                "vt": "str"
+            },
+            {
+                "p": "topic",
+                "v": "",
+                "vt": "str"
+            }
+        ],
+        "repeat": "10",
+        "once": true,
+        "onceDelay": 2,
+        "x": 170,
+        "y": 200,
+        "wires": [
+            [
+                "http_bms1"
+            ]
+        ]
+    },
+    {
+        "id": "http_bms1",
+        "type": "http request",
+        "z": "e632a263b916f867",
+        "name": "Get BMS1",
+        "method": "GET",
+        "ret": "obj",
+        "url": "http://192.168.3.37/status",
+        "x": 360,
+        "y": 200,
+        "wires": [
+            [
+                "store_bms1"
+            ]
+        ]
+    },
+    {
+        "id": "store_bms1",
+        "type": "function",
+        "z": "e632a263b916f867",
+        "name": "Store batt1 + detect remote ON",
+        "func": "let voltage = null;\nlet temp = null;\n\nif(msg.payload && msg.payload.adcs && msg.payload.adcs.length > 0){\n    voltage = msg.payload.adcs[0].voltage;\n}\n\nif(msg.payload && msg.payload.ext_temperature && msg.payload.ext_temperature['0']){\n    temp = msg.payload.ext_temperature['0'].tC;\n}\n\nif(voltage === null) return null;\n\nflow.set('batt1', voltage);\nif(temp !== null) flow.set('temp1', temp);\n\nmsg.voltage = voltage;\n\n// Detect relay OFF → ON (remote MP2)\nlet relayOn = false;\nif(msg.payload.relays && msg.payload.relays[0]){\n    relayOn = msg.payload.relays[0].ison;\n}\n\nlet prevRelay = flow.get('prevRelay');\nif(prevRelay === undefined) prevRelay = relayOn; // init sans déclencher\n\nflow.set('prevRelay', relayOn);\n\n// Passage OFF → ON détecté !\nif(relayOn === true && prevRelay === false){\n    flow.set('remoteOnDetected', true);\n    flow.set('remoteOnTime', Date.now());\n    node.warn('Remote ON détecté → restart mk2-dbus dans 45s');\n}\n\nreturn msg;",
+        "outputs": 1,
+        "x": 580,
+        "y": 200,
+        "wires": [
+            [
+                "http_bms2"
+            ]
+        ]
+    },
+    {
+        "id": "http_bms2",
+        "type": "http request",
+        "z": "e632a263b916f867",
+        "name": "Get BMS2",
+        "method": "GET",
+        "ret": "obj",
+        "url": "http://192.168.3.50/status",
+        "x": 760,
+        "y": 200,
+        "wires": [
+            [
+                "store_bms2"
+            ]
+        ]
+    },
+    {
+        "id": "store_bms2",
+        "type": "function",
+        "z": "e632a263b916f867",
+        "name": "Store batt2 + DVCC",
+        "func": "let voltage = null;\nlet temp = null;\n\nif(msg.payload && msg.payload.adcs && msg.payload.adcs.length > 0){\n    voltage = msg.payload.adcs[0].voltage;\n}\n\nif(msg.payload && msg.payload.ext_temperature && msg.payload.ext_temperature.length > 0){\n    temp = msg.payload.ext_temperature[0].tC;\n}\n\nif(voltage === null) return null;\n\nflow.set('batt2',voltage);\nif(temp !== null) flow.set('temp2',temp);\n\nlet batt1 = flow.get('batt1');\nlet batt2 = voltage;\n\nlet temp1 = flow.get('temp1');\nlet temp2 = temp;\n\nif(batt1 === undefined) return null;\n\nlet delta = Math.abs(batt1-batt2);\ndelta = Number(delta.toFixed(3));\n\nlet deltaTemp=null;\n\nif(temp1!==undefined && temp2!==undefined)\n    deltaTemp=Math.abs(temp1-temp2);\n\nlet soc = global.get(\"homeassistant.homeAssistant.states['sensor.smartshunt500a_soc'].state\");\nsoc = Number(soc);\n\nlet ess_action='none';\nlet charge_limit=null;\n\nlet minTemp=Math.min(temp1,temp2);\n\nif(minTemp<0){\n    ess_action='block_charge';\n}\nelse if(minTemp<3){\n    ess_action='limit_charge';\n    charge_limit=5;\n}\nelse if(minTemp<6){\n    ess_action='limit_charge';\n    charge_limit=10;\n}\nelse if(minTemp<10){\n    ess_action='limit_charge';\n    charge_limit=20;\n}\n\nif(ess_action==='none'){\n    if(soc>95){\n        ess_action='limit_charge';\n        charge_limit=5;\n    }\n    else if(soc>90){\n        ess_action='limit_charge';\n        charge_limit=15;\n    }\n    else if(soc>80){\n        ess_action='limit_charge';\n        charge_limit=25;\n    }\n}\n\nif(delta>0.8){\n    ess_action='block_charge';\n}\nelse if(delta>0.6){\n    ess_action='limit_charge';\n    charge_limit=5;\n}\nelse if(delta>0.35){\n    ess_action='limit_charge';\n    charge_limit=15;\n}\n\n// Vérifier si restart mk2-dbus nécessaire\nlet remoteOnDetected = flow.get('remoteOnDetected');\nlet remoteOnTime = flow.get('remoteOnTime');\n\nif(remoteOnDetected && remoteOnTime && (Date.now() - remoteOnTime) > 45000){\n    flow.set('remoteOnDetected', false);\n    flow.set('remoteOnTime', null);\n    msg.doRestartMk2 = true;\n    node.warn('45s écoulées → restart mk2-dbus');\n}\n\nmsg.payload={\n    batt1:batt1,\n    batt2:batt2,\n    temp1:temp1,\n    temp2:temp2,\n    delta:delta,\n    deltaTemp:deltaTemp,\n    soc:soc,\n    ess_action:ess_action,\n    charge_limit:charge_limit\n};\n\nreturn msg;",
+        "outputs": 1,
+        "x": 1020,
+        "y": 200,
+        "wires": [
+            [
+                "ess_control",
+                "debug_output",
+                "6ce733967357e3ab",
+                "check_restart_mk2"
+            ]
+        ]
+    },
+    {
+        "id": "check_restart_mk2",
+        "type": "switch",
+        "z": "e632a263b916f867",
+        "name": "Restart mk2 needed?",
+        "property": "doRestartMk2",
+        "rules": [
+            {
+                "t": "true"
+            }
+        ],
+        "outputs": 1,
+        "x": 1260,
+        "y": 320,
+        "wires": [
+            [
+                "restart_mk2"
+            ]
+        ]
+    },
+    {
+        "id": "restart_mk2",
+        "type": "exec",
+        "z": "e632a263b916f867",
+        "command": "svc -t /service/mk2-dbus.ttyUSB0",
+        "addpay": false,
+        "append": "",
+        "useSpawn": false,
+        "timer": "10",
+        "name": "svc -t mk2-dbus",
+        "x": 1480,
+        "y": 320,
+        "wires": [
+            [
+                "log_mk2_ok"
+            ],
+            [
+                "log_mk2_err"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "log_mk2_ok",
+        "type": "debug",
+        "z": "e632a263b916f867",
+        "name": "mk2 restart OK",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "complete": "payload",
+        "x": 1680,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "log_mk2_err",
+        "type": "debug",
+        "z": "e632a263b916f867",
+        "name": "mk2 restart ERR",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "complete": "payload",
+        "x": 1680,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "ess_control",
+        "type": "function",
+        "z": "e632a263b916f867",
+        "name": "ESS Control Output",
+        "func": "if(msg.payload.ess_action==='block_charge'){\n    msg.payload={mode:'keep_charged'};\n    return msg;\n}\n\nif(msg.payload.ess_action==='limit_charge'){\n    msg.payload={dvcc_charge_limit:msg.payload.charge_limit};\n    return msg;\n}\n\nreturn null;",
+        "outputs": 1,
+        "x": 1240,
+        "y": 140,
+        "wires": [
+            [
+                "b4cf6c6440804b36"
+            ]
+        ]
+    },
+    {
+        "id": "debug_output",
+        "type": "debug",
+        "z": "e632a263b916f867",
+        "name": "Battery Monitor",
+        "active": true,
+        "complete": "payload",
+        "x": 1240,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "6ce733967357e3ab",
+        "type": "debug",
+        "z": "e632a263b916f867",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 1220,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "b4cf6c6440804b36",
+        "type": "debug",
+        "z": "e632a263b916f867",
+        "name": "debug 2",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 1280,
+        "y": 60,
+        "wires": []
+    }
+]

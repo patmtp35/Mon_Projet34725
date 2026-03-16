@@ -6,7 +6,7 @@
 ![ESS](https://img.shields.io/badge/Victron-MultiPlusII-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-![Architecture](schema.png)
+![Architecture](Schema_Electrique_V2.png)
 
 # Victron VenusOS DIY Integration (ESP32 + MQTT)
 
@@ -218,6 +218,6 @@ https://github.com/mr-manuel/venus-os_dbus-mqtt-solar-charger
 
 Victron Unified ESP32 :
 
-v6.2
+v6.5
 
-Compatible VenusOS 3.70
+Compatible VenusOS 3.71 Beta
