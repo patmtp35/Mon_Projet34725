@@ -288,8 +288,9 @@ Warning normal si le câble VE.Direct n'est pas branché. Vérifiez le câblage 
 ## 📝 Changelog
 
 | Version | Description |
-|---|---|
-| **6.4** | Refactoring complet en substitutions — publication publique |
+
+| ** 6.5 ** | template bugs correction
+| 6.4 | Refactoring complet en substitutions — publication publique |
 | 6.3 | Amélioration remontée historique MPPT |
 | 6.2 | GX ESS amélioration |
 | 6.1 | Amélioration MQTT Venus OS |
